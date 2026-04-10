@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Shortener — AWS Learning App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; padding: 40px 20px; color: #333; }
+    .container { max-width: 560px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    p.sub { color: #666; font-size: 14px; margin-bottom: 28px; }
+    .card { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 16px; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; margin-bottom: 12px; }
+    button { background: #232f3e; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 15px; cursor: pointer; width: 100%; }
+    button:hover { background: #1a232e; }
+    .result { background: #f0fff4; border: 1px solid #68d391; border-radius: 6px; padding: 14px; margin-top: 14px; display: none; }
+    .result a { color: #276749; word-break: break-all; }
+    .analytics-result { background: #ebf8ff; border: 1px solid #90cdf4; border-radius: 6px; padding: 14px; margin-top: 14px; display: none; }
+    .error { background: #fff5f5; border: 1px solid #fc8181; border-radius: 6px; padding: 14px; margin-top: 14px; display: none; }
+    label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px; color: #555; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>URL Shortener</h1>
+  <p class="sub">Built on AWS — EC2 · RDS · SQS · Lambda · DynamoDB · S3</p>
+
+  <div class="card">
+    <label>Shorten a URL</label>
+    <input type="url" id="longUrl" placeholder="https://example.com/very/long/url" />
+    <button onclick="shorten()">Shorten</button>
+    <div class="result" id="shortenResult"></div>
+    <div class="error" id="shortenError"></div>
+  </div>
+
+  <div class="card">
+    <label>Check Analytics</label>
+    <input type="text" id="analyticsCode" placeholder="Enter short code (e.g. a1b2c3d4)" />
+    <button onclick="getAnalytics()">Get Click Count</button>
+    <div class="analytics-result" id="analyticsResult"></div>
+    <div class="error" id="analyticsError"></div>
+  </div>
+</div>
+
+<script>
+  // Replace with your EC2 public IP or ALB DNS name
+  const API_BASE = window.location.origin;
+
+  async function shorten() {
+    const url = document.getElementById('longUrl').value.trim();
+    const resultEl = document.getElementById('shortenResult');
+    const errorEl = document.getElementById('shortenError');
+    resultEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    if (!url) return alert('Please enter a URL');
+
+    try {
+      const res = await fetch(`${API_BASE}/shorten`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      resultEl.innerHTML = `
+        Short code: <strong>${data.short_code}</strong><br>
+        Short URL: <a href="${data.short_url}" target="_blank">${data.short_url}</a>
+      `;
+      resultEl.style.display = 'block';
+    } catch (e) {
+      errorEl.textContent = 'Error: ' + e.message;
+      errorEl.style.display = 'block';
+    }
+  }
+
+  async function getAnalytics() {
+    const code = document.getElementById('analyticsCode').value.trim();
+    const resultEl = document.getElementById('analyticsResult');
+    const errorEl = document.getElementById('analyticsError');
+    resultEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    if (!code) return alert('Please enter a short code');
+
+    try {
+      const res = await fetch(`${API_BASE}/analytics/${code}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      resultEl.innerHTML = `Code <strong>${data.code}</strong> has been clicked <strong>${data.click_count}</strong> time(s).`;
+      resultEl.style.display = 'block';
+    } catch (e) {
+      errorEl.textContent = 'Error: ' + e.message;
+      errorEl.style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>
