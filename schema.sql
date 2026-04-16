@@ -1,26 +1,24 @@
--- Run this on your RDS MySQL instance after creating it
-
-CREATE DATABASE IF NOT EXISTS urlshortener;
-USE urlshortener;
+-- Run this on your RDS PostgreSQL instance after creating it
+-- Connect using: psql -h YOUR_RDS_ENDPOINT -U postgres -d urlshortener
 
 -- Stores the URL mappings
 CREATE TABLE IF NOT EXISTS urls (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
+  id           SERIAL PRIMARY KEY,
   code         VARCHAR(16) NOT NULL UNIQUE,
   original_url TEXT NOT NULL,
-  created_at   DATETIME NOT NULL,
-  INDEX idx_code (code)
+  created_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Stores analytics (synced from DynamoDB via Lambda or direct inserts)
--- This is a simple mirror table for the /analytics/:code API endpoint
+CREATE INDEX IF NOT EXISTS idx_code ON urls(code);
+
+-- Stores analytics (updated by Lambda via DynamoDB sync)
 CREATE TABLE IF NOT EXISTS url_analytics (
   code         VARCHAR(16) NOT NULL PRIMARY KEY,
   click_count  INT DEFAULT 0,
-  last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  last_updated TIMESTAMP DEFAULT NOW()
 );
 
 -- Test data
-INSERT INTO urls (code, original_url, created_at)
-VALUES ('test1234', 'https://www.google.com', NOW())
-ON DUPLICATE KEY UPDATE original_url = VALUES(original_url);
+INSERT INTO urls (code, original_url)
+VALUES ('test1234', 'https://www.google.com')
+ON CONFLICT (code) DO NOTHING;
