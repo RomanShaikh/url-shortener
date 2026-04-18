@@ -1,17 +1,19 @@
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 
 const client = new SQSClient({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: process.env.AWS_REGION || 'eu-north-1',
 });
 
-const QUEUE_URL = process.env.SQS_QUEUE_URL; // set this after creating the queue
+const QUEUE_URL = process.env.SQS_QUEUE_URL;
 
 async function sendClickEvent(payload) {
   if (!QUEUE_URL) {
-    // Gracefully skip if SQS not configured yet (local dev)
-    console.log('[SQS] Queue URL not set, skipping. Payload:', payload);
+    console.warn('[SQS] SQS_QUEUE_URL not set in .env — skipping queue message');
     return;
   }
+
+  console.log(`[SQS] Preparing message for queue: ${QUEUE_URL}`);
+  console.log(`[SQS] Payload: ${JSON.stringify(payload)}`);
 
   const command = new SendMessageCommand({
     QueueUrl: QUEUE_URL,
@@ -26,10 +28,11 @@ async function sendClickEvent(payload) {
 
   try {
     const result = await client.send(command);
-    console.log('[SQS] Message sent, MessageId:', result.MessageId);
+    console.log(`[SQS] Message sent OK — MessageId: ${result.MessageId}`);
+    return result;
   } catch (err) {
-    // Non-fatal — don't fail the redirect if SQS is down
-    console.error('[SQS] Failed to send message:', err.message);
+    console.error(`[SQS ERROR] Failed to send message: ${err.message}`);
+    // Non-fatal — don't crash the redirect
   }
 }
 
