@@ -2,10 +2,18 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('./db');
 const queue = require('./queue');
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
+
+
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+}));
+
 
 // ─── Request logger middleware ───────────────────────────────────────────────
 app.use((req, res, next) => {
